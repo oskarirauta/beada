@@ -429,8 +429,8 @@ static struct edid beada_edid = {
 		.pixel_clock = 0,
 		.data.other_data.type = 0xfc, /* Model string */
 		.data.other_data.data.str.str = {
-			'P', 'r', 'o', 'j', 'e', 'c', 't', 'o', 'r', '\n',
-			' ', ' ',  ' ' },
+			'B', 'e', 'a', 'd', 'a', 'P', 'a', 'n', 'e', 'l',
+			'\n', ' ',  ' ' },
 	}, {
 		.pixel_clock = 0,
 		.data.other_data.type = 0xfe, /* Unspecified text / padding */
@@ -440,6 +440,22 @@ static struct edid beada_edid = {
 	} },
 	.checksum = 0x13,
 };
+
+/*
+// beada panel edid 128 byte extension block
+unsigned char edid_extension[128] = {
+		0x50, 1, 0, 16, 0, 128, // version 1.0, unicode version: 1.0.0, UTF-8
+		3, 72, 86, 97, // country code: USA
+		6, 'N', 'X', 'E', 'L', 'E', 'C', // Manufacturer
+		13, 'B', 'e', 'a', 'd', 'a', 'P', 'a', 'n', 'e', 'l', ' ', ' ', ' ', // Model
+		10, '2', '8', '5', '7', '7', '4', '0', '8' , '8', '5', // Serial
+		0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+		0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+		0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+		0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+		0, 0, 0, 0, 0, 0
+	};
+*/
 
 static int beada_conn_get_modes(struct drm_connector *connector)
 {
@@ -609,8 +625,10 @@ static void beada_edid_setup(struct beada_device *beada)
 					((u8)(width_mm / 256) << 4) | \
 					((u8)(height_mm / 256) & 0xf);
 
-	memcpy(&beada_edid.detailed_timings[2].data.other_data.data.str.str,
+	memcpy(&beada_edid.detailed_timings[2].data.other_data.data.str.str[10],
 		beada->model, strlen(beada->model));
+
+	beada_edid.detailed_timings[2].data.other_data.data.str.str[10 + strlen(beada->model)] = 0;
 
 	snprintf(buf, 16, "%02X%02X%02X%02X\n",
 		beada->id[4], beada->id[5], beada->id[6], beada->id[7]);
