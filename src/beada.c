@@ -59,10 +59,6 @@
 #define PANELLINK_MAX_DELAY		msecs_to_jiffies(2500)
 #define CMD_SIZE			512*4
 
-static int landscape = 0;
-module_param(landscape, int, 0660);
-MODULE_PARM_DESC(landscape, "enable landscape mode by setting this value to 1");
-
 struct beada_device {
 	struct drm_device				dev;
 	struct drm_simple_display_pipe	pipe;
@@ -88,8 +84,6 @@ struct beada_device {
 	unsigned int	misc_rcv_ept;
 	unsigned int	misc_snd_ept;
 	unsigned int	data_snd_ept;
-
-	bool		landscape;
 };
 
 #define to_beada(__dev) container_of(__dev, struct beada_device, dev)
@@ -300,11 +294,11 @@ static int beada_misc_request(struct beada_device *beada)
 		break;
 	}
 
-	beada->width = beada->landscape ? height : width;
-	beada->height = beada->landscape ? width : height;
+	beada->width = width;
+	beada->height = height;
 	beada->model = model;
-	beada->width_mm = beada->landscape ? height_mm : width_mm;
-	beada->height_mm = beada->landscape ? width_mm : height_mm;
+	beada->width_mm = width_mm;
+	beada->height_mm = height_mm;
 	
 	return 0;
 }
@@ -476,7 +470,6 @@ static void beada_pipe_enable(struct drm_simple_display_pipe *pipe,
 				 struct drm_crtc_state *crtc_state,
 				 struct drm_plane_state *plane_state)
 {
-	struct beada_device *beada = to_beada(fb->dev);
 	struct drm_shadow_plane_state *shadow_plane_state = to_drm_shadow_plane_state(plane_state);
 	struct drm_framebuffer *fb = plane_state->fb;
 	struct drm_rect rect = {
@@ -485,8 +478,6 @@ static void beada_pipe_enable(struct drm_simple_display_pipe *pipe,
 		.y1 = 0,
 		.y2 = fb->height,
 	};
-
-	pipe->crtc.rotation = beada->landscape ? DRM_MODE_ROTATE_90 : DRM_MODE_ROTATE_0;
 
 	beada_fb_mark_dirty(fb, &shadow_plane_state->data[0], &rect);
 }
@@ -630,21 +621,6 @@ static void beada_edid_setup(struct beada_device *beada)
 	beada_edid.checksum = beada_edid_block_checksum((u8*)&beada_edid);
 }
 
-static ssize_t landscape_get(struct device* dev, struct device_attribute *attr, char *buf) {
-
-	struct beada_device *beada = dev_get_drvdata(dev);
-
-	return sprintf(buf, beada->landscape ? "true\n" : "false\n");
-}
-
-static struct device_attribute landscape_attr = {
-	.attr = {
-		.name = "landscape",
-		.mode = S_IWUSR | S_IRUGO,
-	},
-	.show = landscape_get,
-};
-
 static ssize_t model_get(struct device* dev, struct device_attribute *attr, char *buf) {
 
 	struct beada_device *beada = dev_get_drvdata(dev);
@@ -665,17 +641,12 @@ static int beada_sysfs_create(struct beada_device *beada)
 {
 	int ret;
 
-	ret = sysfs_create_file(&beada -> dev.dev -> kobj, &landscape_attr.attr);
-	if (ret)
-		return ret;
-
 	ret = sysfs_create_file(&beada -> dev.dev -> kobj, &model_attr.attr);
 	return ret;
 }
 
 static void beada_sysfs_remove(struct beada_device *beada)
 {
-	sysfs_remove_file(&beada -> dev.dev -> kobj, &landscape_attr.attr);
 	sysfs_remove_file(&beada -> dev.dev -> kobj, &model_attr.attr);
 }
 
@@ -700,8 +671,6 @@ static int beada_usb_probe(struct usb_interface *interface,
 		return PTR_ERR(beada);
 	}
 	
-	beada->landscape = landscape == 0 ? false : true;
-
 	/* Check corresponding endpoint number */
 	beada->misc_snd_ept = 2;
 	beada->misc_rcv_ept = 2;
@@ -782,7 +751,7 @@ static int beada_usb_probe(struct usb_interface *interface,
 	if (ret)
 		DRM_DEV_ERROR(beada->dev.dev, "sysfs_create_file() return %d\n", ret);
 
-	DRM_DEV_INFO(&beada->udev->dev, "BeadaPanel %s detected, %s mode\n", beada->model, beada->landscape ? "landscape" : "portrait");
+	DRM_DEV_INFO(&beada->udev->dev, "BeadaPanel %s detected\n", beada->model);
 
 	DRM_DEV_DEBUG(&beada->udev->dev, "--------------beada_usb_probe() exit\n");
 	return ret;
