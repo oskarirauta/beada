@@ -668,6 +668,53 @@ static void beada_sysfs_remove(struct beada_device *beada)
 	sysfs_remove_file(&beada -> dev.dev -> kobj, &model_attr.attr);
 }
 
+static int beada_update_time(struct beada_device *beada) {
+
+	int ret;
+	unsigned int len, len1;
+	struct timespec64 now;
+	struct tm tm_now;
+
+	ktime_get_real_ts64(&now);
+	now.tv_sec -= (long long int)sys_tz.tz_minuteswest * 60;
+
+	time64_to_tm(now.tv_sec, 0, &tm_now);
+
+	len = CMD_SIZE;
+
+	STATUSLINK_TIME new_time = {
+		.year = tm_now.tm_year,
+		.month = tm_now.tm_mon + 1,
+		.day_of_week = tm_now.tm_wday,
+		.day = tm_now.tm_mday,
+		.hour = tm_now.tm_hour,
+		.minute = tm_now.tm_min,
+		.second = tm_now.tm_sec,
+		.ms = 0
+	};
+
+	// prepare statuslink command
+	ret = fillSLSetTime(beada->cmd_buf, &len, new_time);
+	if (ret) {
+		DRM_DEV_ERROR(&beada->udev->dev, "fillSLSetTime() error %d\n", ret);
+		return -EIO;
+	}
+
+	HexDump(beada->cmd_buf, len, beada->cmd_buf);
+
+	/* send request */
+	ret = usb_bulk_msg(beada->udev,
+			usb_sndbulkpipe(beada->udev, beada->misc_snd_ept),
+			beada->cmd_buf, len, &len1, CMD_TIMEOUT);
+
+	if (ret || len1 != len) {
+		DRM_DEV_ERROR(&beada->udev->dev, "usb_bulk_msg() write error %d\n", ret);
+		return -EIO;
+	}
+
+	return 0;
+}
+
 static int beada_usb_probe(struct usb_interface *interface,
 			  const struct usb_device_id *id)
 {
@@ -768,6 +815,10 @@ static int beada_usb_probe(struct usb_interface *interface,
 	ret = beada_sysfs_create(beada);
 	if (ret)
 		DRM_DEV_ERROR(beada->dev.dev, "sysfs_create_file() return %d\n", ret);
+
+	ret = beada_update_time(beada);
+	if (ret)
+		DRM_DEV_ERROR(beada->dev.dev, "beada_update_time() return %d\n", ret);
 
 	DRM_DEV_INFO(&beada->udev->dev, "BeadaPanel %s detected\n", beada->model);
 

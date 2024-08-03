@@ -221,6 +221,19 @@ int fillSLSetBL(unsigned char * data,
     return (packageDummySL(data, TYPE_SET_BACKLIGHT));
 }
 
+int retrivSLGetTíme(unsigned char * data,
+        unsigned int len,
+        STATUSLINK_TIME * value)
+{
+	// check length of data         
+	if (len < sizeof(STATUSLINK_TIME_PACK))
+		return -1;
+
+	STATUSLINK_TIME_PACK * pTemp = (STATUSLINK_TIME_PACK *)data;
+	*value = pTemp->value;
+	return 0;
+}
+
 int fillSLSetTime(unsigned char * data,
 		  unsigned int * len,
 		  STATUSLINK_TIME value)

@@ -42,14 +42,14 @@ typedef struct _STATUSLINK_INFO {
 }  STATUSLINK_INFO;
 
 typedef struct _STATUSLINK_TIME {
-	unsigned char year;
-	unsigned char month;
-	unsigned char day_of_week;
-	unsigned char day;
-	unsigned char hour;
-	unsigned char minute;
-	unsigned char second;
-	unsigned char ms;
+	unsigned short year;
+	unsigned short month;
+	unsigned short day_of_week;
+	unsigned short day;
+	unsigned short hour;
+	unsigned short minute;
+	unsigned short second;
+	unsigned short ms;
 } STATUSLINK_TIME;
 
 #pragma pack(pop)//�ָ�����״̬
@@ -85,6 +85,7 @@ int fillSLSetBL(unsigned char * data, unsigned int * len, unsigned char value);
 //       in - value of backlight level.
 //
 
+int retrivSLGetTíme(unsigned char * data, unsigned int len, STATUSLINK_TIME * value);
 int fillSLSetTime(unsigned char * data, unsigned int * len, STATUSLINK_TIME value);
 
 int fillSLGetInfo(unsigned char * data, unsigned int * len);
